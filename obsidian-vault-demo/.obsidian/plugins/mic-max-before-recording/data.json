@@ -1,4 +1,5 @@
 {
   "recordingColor": "red",
-  "autoGainControl": false
+  "autoGainControl": false,
+  "showCoreRecorderIcon": false
 }

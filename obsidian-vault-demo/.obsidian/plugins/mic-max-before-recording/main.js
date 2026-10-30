@@ -4,13 +4,22 @@ const path = require("path");
 
 const RECORDER_START_COMMAND_ID = "audio-recorder:start";
 const RECORDER_STOP_COMMAND_ID = "audio-recorder:stop";
-const DEFAULT_SETTINGS = { recordingColor: "red", autoGainControl: false };
+const DEFAULT_SETTINGS = { recordingColor: "red", autoGainControl: false, showCoreRecorderIcon: false };
 const RECORDING_COLORS = { red: "#e5484d", green: "#2da44e", blue: "#3478f6" };
+const CORE_RECORDER_LABELS = new Set([
+  "开始/结束录音",
+  "开始/停止录音",
+  "start/stop recording",
+  "start/stop audio recording",
+  "record audio",
+  "audio recorder"
+]);
 
 class MicMaxBeforeRecordingPlugin extends Plugin {
   async onload() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     this.running = false;
+    this.coreRecorderRibbonObserver = null;
     this.addSettingTab(new MicMaxSettingsTab(this.app, this));
 
     this.addCommand({
@@ -26,6 +35,46 @@ class MicMaxBeforeRecordingPlugin extends Plugin {
     } catch (_) {
       this.setRecordingIndicator(false);
     }
+    this.startCoreRecorderRibbonVisibilityTracking();
+  }
+
+  onunload() {
+    if (this.coreRecorderRibbonObserver) {
+      this.coreRecorderRibbonObserver.disconnect();
+      this.coreRecorderRibbonObserver = null;
+    }
+    this.setCoreRecorderRibbonVisibility(false);
+  }
+
+  isCoreRecorderRibbonAction(element) {
+    if (!element || element === this.recordingRibbonButton) return false;
+    const values = [
+      element.getAttribute("aria-label"),
+      element.getAttribute("data-tooltip"),
+      element.getAttribute("title"),
+      element.getAttribute("data-command-id")
+    ].filter(Boolean).map((value) => value.trim().toLowerCase());
+    return values.some((value) => value.includes("audio-recorder") || CORE_RECORDER_LABELS.has(value));
+  }
+
+  getCoreRecorderRibbonActions() {
+    return Array.from(document.querySelectorAll(".side-dock-ribbon-action, .workspace-ribbon .ribbon-action"))
+      .filter((element) => this.isCoreRecorderRibbonAction(element));
+  }
+
+  setCoreRecorderRibbonVisibility(shouldHide) {
+    for (const element of this.getCoreRecorderRibbonActions()) {
+      element.classList.toggle("mic-max-core-recorder-hidden", shouldHide);
+    }
+  }
+
+  startCoreRecorderRibbonVisibilityTracking() {
+    this.setCoreRecorderRibbonVisibility(!this.settings.showCoreRecorderIcon);
+    if (typeof MutationObserver !== "function") return;
+    this.coreRecorderRibbonObserver = new MutationObserver(() => {
+      this.setCoreRecorderRibbonVisibility(!this.settings.showCoreRecorderIcon);
+    });
+    this.coreRecorderRibbonObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   getVolumeHelperPath() {
@@ -227,6 +276,17 @@ class MicMaxSettingsTab extends PluginSettingTab {
         .setValue(Boolean(this.plugin.settings.autoGainControl))
         .onChange(async (value) => {
           this.plugin.settings.autoGainControl = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName("显示 Obsidian 核心录音机图标")
+      .setDesc("仅控制核心录音机在左侧功能区的图标，不会关闭核心录音机功能。默认隐藏，建议使用本插件的图标录音。")
+      .addToggle((toggle) => toggle
+        .setValue(Boolean(this.plugin.settings.showCoreRecorderIcon))
+        .onChange(async (value) => {
+          this.plugin.settings.showCoreRecorderIcon = value;
+          this.plugin.setCoreRecorderRibbonVisibility(!value);
           await this.plugin.saveSettings();
         }));
   }

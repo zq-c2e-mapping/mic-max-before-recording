@@ -2,3 +2,7 @@
   color: var(--mic-max-recording-color, #e5484d);
   stroke: currentColor;
 }
+
+.mic-max-core-recorder-hidden {
+  display: none !important;
+}
