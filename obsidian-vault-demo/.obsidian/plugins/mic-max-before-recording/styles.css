@@ -1,0 +1,4 @@
+.mic-max-recording-active svg {
+  color: var(--mic-max-recording-color, #e5484d);
+  stroke: currentColor;
+}

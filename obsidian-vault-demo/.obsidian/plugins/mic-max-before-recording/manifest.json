@@ -1,0 +1,9 @@
+{
+  "id": "mic-max-before-recording",
+  "name": "Mic Max Before Recording",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "Set microphone volume before recording and configure recording indicator and auto gain behavior.",
+  "author": "Local",
+  "isDesktopOnly": true
+}
